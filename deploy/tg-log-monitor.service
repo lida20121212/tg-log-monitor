@@ -1,0 +1,15 @@
+[Unit]
+Description=Telegram error log monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/tg-log-monitor
+ExecStart=/opt/tg-log-monitor/tg-log-monitor -config /opt/tg-log-monitor/config.json
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

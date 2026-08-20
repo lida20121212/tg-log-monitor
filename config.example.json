@@ -1,0 +1,40 @@
+{
+  "telegram": {
+    "bot_token": "123456:replace-with-your-bot-token",
+    "chat_id": "-1001234567890",
+    "parse_mode": ""
+  },
+  "sources": [
+    {
+      "name": "server-1",
+      "log_root": "/logs",
+      "file_name": "app.log",
+      "date_layout": "2006-01-02",
+      "timezone": "Asia/Shanghai"
+    }
+  ],
+  "match": {
+    "include_regex": [
+      "\"level\"\\s*:\\s*\"ERROR\"",
+      "\"level\"\\s*:\\s*\"FATAL\"",
+      "\"level\"\\s*:\\s*\"PANIC\"",
+      "\\bERROR\\b",
+      "\\bFATAL\\b",
+      "\\bPANIC\\b",
+      "panic:"
+    ],
+    "exclude_regex": [
+      "\"response\"\\s*:\\s*\\{[^}\\n]*\"code\"\\s*:\\s*40102\\b",
+      "\"error\"\\s*:\\s*\"Verification failed\"\\s*,\\s*\"response\"\\s*:\\s*\\{[^}\\n]*\"code\"\\s*:\\s*1\\b[^}\\n]*\"msg\"\\s*:\\s*\"Verification failed\""
+    ],
+    "context_lines_after": 0
+  },
+  "poll_interval": "2s",
+  "send_interval": "5s",
+  "max_batch_lines": 20,
+  "state_file": "state.json",
+  "start_at_end": true,
+  "message_max_chars": 3500,
+  "http_timeout": "10s",
+  "dry_run": false
+}
