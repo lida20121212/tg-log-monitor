@@ -12,17 +12,18 @@ import (
 )
 
 type Config struct {
-	Telegram        TelegramConfig `json:"telegram"`
-	Sources         []SourceConfig `json:"sources"`
-	Match           MatchConfig    `json:"match"`
-	PollInterval    string         `json:"poll_interval"`
-	SendInterval    string         `json:"send_interval"`
-	MaxBatchLines   int            `json:"max_batch_lines"`
-	StateFile       string         `json:"state_file"`
-	StartAtEnd      *bool          `json:"start_at_end"`
-	MessageMaxChars int            `json:"message_max_chars"`
-	HTTPTimeout     string         `json:"http_timeout"`
-	DryRun          bool           `json:"dry_run"`
+	Telegram        TelegramConfig        `json:"telegram"`
+	Sources         []SourceConfig        `json:"sources"`
+	ResourceMonitor ResourceMonitorConfig `json:"resource_monitor"`
+	Match           MatchConfig           `json:"match"`
+	PollInterval    string                `json:"poll_interval"`
+	SendInterval    string                `json:"send_interval"`
+	MaxBatchLines   int                   `json:"max_batch_lines"`
+	StateFile       string                `json:"state_file"`
+	StartAtEnd      *bool                 `json:"start_at_end"`
+	MessageMaxChars int                   `json:"message_max_chars"`
+	HTTPTimeout     string                `json:"http_timeout"`
+	DryRun          bool                  `json:"dry_run"`
 
 	configDir string
 }
@@ -47,6 +48,17 @@ type MatchConfig struct {
 	IncludeRegex      []string `json:"include_regex"`
 	ExcludeRegex      []string `json:"exclude_regex"`
 	ContextLinesAfter int      `json:"context_lines_after"`
+}
+
+type ResourceMonitorConfig struct {
+	Enabled          bool     `json:"enabled"`
+	ServerName       string   `json:"server_name"`
+	Interval         string   `json:"interval"`
+	ThresholdPercent float64  `json:"threshold_percent"`
+	RecoverPercent   float64  `json:"recover_percent"`
+	Cooldown         string   `json:"cooldown"`
+	NotifyRecovery   *bool    `json:"notify_recovery"`
+	DiskPaths        []string `json:"disk_paths"`
 }
 
 const (
@@ -230,6 +242,29 @@ func (c *Config) applyDefaults() {
 		c.Match.ContextLinesAfter = 0
 	}
 
+	if c.ResourceMonitor.Interval == "" {
+		c.ResourceMonitor.Interval = "60s"
+	}
+	if c.ResourceMonitor.Cooldown == "" {
+		c.ResourceMonitor.Cooldown = "10m"
+	}
+	if c.ResourceMonitor.ThresholdPercent <= 0 {
+		c.ResourceMonitor.ThresholdPercent = 80
+	}
+	if c.ResourceMonitor.RecoverPercent <= 0 {
+		c.ResourceMonitor.RecoverPercent = c.ResourceMonitor.ThresholdPercent - 5
+	}
+	if c.ResourceMonitor.RecoverPercent < 0 {
+		c.ResourceMonitor.RecoverPercent = 0
+	}
+	if c.ResourceMonitor.NotifyRecovery == nil {
+		enabled := true
+		c.ResourceMonitor.NotifyRecovery = &enabled
+	}
+	if c.ResourceMonitor.Enabled && len(c.ResourceMonitor.DiskPaths) == 0 {
+		c.ResourceMonitor.DiskPaths = []string{"/"}
+	}
+
 	for i := range c.Sources {
 		if strings.TrimSpace(c.Sources[i].Name) == "" {
 			c.Sources[i].Name = fmt.Sprintf("server-%d", i+1)
@@ -323,6 +358,21 @@ func (c *Config) validate() error {
 	if _, err := time.ParseDuration(c.HTTPTimeout); err != nil {
 		return fmt.Errorf("invalid http_timeout %q: %w", c.HTTPTimeout, err)
 	}
+	if _, err := time.ParseDuration(c.ResourceMonitor.Interval); err != nil {
+		return fmt.Errorf("invalid resource_monitor.interval %q: %w", c.ResourceMonitor.Interval, err)
+	}
+	if _, err := time.ParseDuration(c.ResourceMonitor.Cooldown); err != nil {
+		return fmt.Errorf("invalid resource_monitor.cooldown %q: %w", c.ResourceMonitor.Cooldown, err)
+	}
+	if c.ResourceMonitor.ThresholdPercent <= 0 || c.ResourceMonitor.ThresholdPercent > 100 {
+		return fmt.Errorf("resource_monitor.threshold_percent must be > 0 and <= 100")
+	}
+	if c.ResourceMonitor.RecoverPercent < 0 || c.ResourceMonitor.RecoverPercent > 100 {
+		return fmt.Errorf("resource_monitor.recover_percent must be >= 0 and <= 100")
+	}
+	if c.ResourceMonitor.RecoverPercent >= c.ResourceMonitor.ThresholdPercent {
+		return fmt.Errorf("resource_monitor.recover_percent must be lower than threshold_percent")
+	}
 
 	seenNames := map[string]bool{}
 	for i, src := range c.Sources {
@@ -359,6 +409,36 @@ func (c *Config) SendDuration() time.Duration {
 func (c *Config) HTTPTimeoutDuration() time.Duration {
 	d, _ := time.ParseDuration(c.HTTPTimeout)
 	return d
+}
+
+func (c *Config) ResourceMonitorInterval() time.Duration {
+	d, _ := time.ParseDuration(c.ResourceMonitor.Interval)
+	return d
+}
+
+func (c *Config) ResourceMonitorCooldown() time.Duration {
+	d, _ := time.ParseDuration(c.ResourceMonitor.Cooldown)
+	return d
+}
+
+func (c *Config) ShouldNotifyResourceRecovery() bool {
+	if c.ResourceMonitor.NotifyRecovery == nil {
+		return true
+	}
+	return *c.ResourceMonitor.NotifyRecovery
+}
+
+func (c *Config) ResourceServerName() string {
+	if strings.TrimSpace(c.ResourceMonitor.ServerName) != "" {
+		return strings.TrimSpace(c.ResourceMonitor.ServerName)
+	}
+	if len(c.Sources) > 0 && strings.TrimSpace(c.Sources[0].Name) != "" {
+		return strings.TrimSpace(c.Sources[0].Name)
+	}
+	if hostname, err := os.Hostname(); err == nil && strings.TrimSpace(hostname) != "" {
+		return strings.TrimSpace(hostname)
+	}
+	return "server"
 }
 
 func (c *Config) ShouldStartAtEnd() bool {

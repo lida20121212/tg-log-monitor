@@ -119,4 +119,13 @@ func TestExampleConfigLoads(t *testing.T) {
 			t.Fatalf("sources[%d].date_layout = %q, want 2006-01-02", i, got)
 		}
 	}
+	if !cfg.ResourceMonitor.Enabled {
+		t.Fatal("expected example resource monitor to be enabled")
+	}
+	if got := cfg.ResourceMonitor.ThresholdPercent; got != 80 {
+		t.Fatalf("resource threshold = %.1f, want 80.0", got)
+	}
+	if len(cfg.ResourceMonitor.DiskPaths) == 0 {
+		t.Fatal("expected example resource monitor disk paths")
+	}
 }

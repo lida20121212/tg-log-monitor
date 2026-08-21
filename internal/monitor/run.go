@@ -32,7 +32,7 @@ func Run(args []string) error {
 	if *testTelegram {
 		ctx, cancel := context.WithTimeout(context.Background(), cfg.HTTPTimeoutDuration())
 		defer cancel()
-		text := fmt.Sprintf("[TG LOG MONITOR TEST]\ntime: %s\nconfig: %s\nsources: %d",
+		text := fmt.Sprintf("[TG日志监控测试]\n时间: %s\n配置: %s\n日志来源数: %d",
 			time.Now().Format("2006-01-02 15:04:05"), *configPath, len(cfg.Sources))
 		if err := sender.Send(ctx, text); err != nil {
 			return fmt.Errorf("telegram test failed: %w", err)
@@ -56,13 +56,20 @@ func Run(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	var tailWG sync.WaitGroup
+	var producerWG sync.WaitGroup
 	for _, source := range cfg.Sources {
 		source := source
-		tailWG.Add(1)
+		producerWG.Add(1)
 		go func() {
-			defer tailWG.Done()
+			defer producerWG.Done()
 			TailSource(ctx, cfg, source, store, matcher, alerts, logger, *once)
+		}()
+	}
+	if cfg.ResourceMonitor.Enabled {
+		producerWG.Add(1)
+		go func() {
+			defer producerWG.Done()
+			RunResourceMonitor(ctx, cfg, alerts, logger, *once)
 		}()
 	}
 
@@ -73,7 +80,7 @@ func Run(args []string) error {
 		RunBatcher(ctx, alerts, sender, cfg.SendDuration(), cfg.HTTPTimeoutDuration(), cfg.MaxBatchLines, logger)
 	}()
 
-	tailWG.Wait()
+	producerWG.Wait()
 	close(alerts)
 	sendWG.Wait()
 	if err := store.Save(); err != nil {

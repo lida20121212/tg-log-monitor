@@ -10,11 +10,13 @@ import (
 )
 
 type Alert struct {
+	Kind       AlertKind
 	SourceName string
 	Path       string
 	Offset     int64
 	ObservedAt time.Time
 	Lines      []string
+	Resource   *ResourceAlert
 }
 
 type sourceWatcher struct {

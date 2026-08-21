@@ -77,6 +77,36 @@
     // }
   ],
 
+  // 服务器资源监控。只支持 Linux；采集方式为读取 /proc 和 statfs，不会扫描目录。
+  "resource_monitor": {
+    // true：开启 CPU / 内存 / 磁盘使用率告警；false：只监控错误日志。
+    "enabled": true,
+
+    // 资源告警里的服务器名称。留空时默认使用第一个 sources.name。
+    "server_name": "server-1",
+
+    // 资源采样间隔。建议 30s 或 60s，不需要太短。
+    "interval": "60s",
+
+    // CPU、内存、磁盘使用率超过这个百分比时发送 TG 告警。
+    "threshold_percent": 80,
+
+    // 已告警的指标降到这个百分比以下时，认为恢复。
+    "recover_percent": 75,
+
+    // 持续异常时的重复提醒间隔，避免一直刷屏。
+    "cooldown": "10m",
+
+    // true：恢复时也发送一条 TG；false：只发异常告警。
+    "notify_recovery": true,
+
+    // 要监控的磁盘路径。程序会统计这些路径所在文件系统的容量，不会递归扫描目录。
+    "disk_paths": [
+      "/",
+      "/www/wwwroot"
+    ]
+  },
+
   // 匹配规则：先 include，再 exclude。命中 include 且未命中 exclude 才会发送 TG。
   "match": {
     // 默认只发送 ERROR / FATAL / PANIC。

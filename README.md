@@ -108,6 +108,24 @@ Windows 本地路径示例：
 默认会扫描 `log_root/<今天日期>/*.log`。如果你现在的配置里还有旧字段 `"file_name": "app.log"`，程序会继续只监听这个单文件；要改成监听目录下全部 `.log`，把它换成 `"file_pattern": "*.log"`。
 `file_pattern` 也可以写成 `"server-*.log"` 这类更窄的匹配规则。
 
+资源监控只支持 Linux，默认旧配置不写 `resource_monitor` 就不会启用。开启后会轻量采集 CPU、内存、磁盘使用率：
+
+```json
+"resource_monitor": {
+  "enabled": true,
+  "server_name": "server-1",
+  "interval": "60s",
+  "threshold_percent": 80,
+  "recover_percent": 75,
+  "cooldown": "10m",
+  "notify_recovery": true,
+  "disk_paths": ["/", "/www/wwwroot"]
+}
+```
+
+CPU 使用率按整机总 CPU 容量计算，不是单核 100% 上限。磁盘使用率用 `statfs` 读取路径所在文件系统容量，不会递归扫描目录，也不会执行 `du`。
+超过阈值会发告警；持续异常时按 `cooldown` 最多重复提醒一次；降到 `recover_percent` 以下时可发送恢复通知。
+
 也可以用环境变量覆盖：
 
 ```bash
