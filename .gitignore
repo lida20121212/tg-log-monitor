@@ -3,3 +3,4 @@ state.json
 *.exe
 tg-log-monitor
 *.log
+.runtime/

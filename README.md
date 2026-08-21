@@ -44,6 +44,29 @@ go build -buildvcs=false -o tg-log-monitor .
 ./tg-log-monitor -config config.json
 ```
 
+内网服务器如果不用 systemd，也可以直接用 `deploy.sh` 拉代码并用 `nohup` 常驻：
+
+```bash
+cd /www/wwwroot/tg-log-monitor
+cp config.example.json config.json   # 只需要首次创建，之后不要覆盖真实配置
+vim config.json
+bash deploy.sh
+```
+
+后续更新只需要：
+
+```bash
+cd /www/wwwroot/tg-log-monitor
+bash deploy.sh
+```
+
+脚本默认会执行 `git pull --ff-only origin main`，构建成功后停掉上一版进程，再用 `nohup` 启动新版。运行信息在 `.runtime/tg-log-monitor.nohup.log`，PID 在 `.runtime/tg-log-monitor.pid`。
+如果目录或配置文件名不同，可以用环境变量覆盖：
+
+```bash
+APP_DIR=/www/wwwroot/tg-log-monitor CONFIG_FILE=config.json BRANCH=main bash deploy.sh
+```
+
 先测试 TG bot 和 chat_id 是否可用：
 
 ```bash
