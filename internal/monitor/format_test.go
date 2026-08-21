@@ -63,6 +63,94 @@ func TestFormatAlertStripsANSIColorCodes(t *testing.T) {
 	}
 }
 
+func TestFormatAlertSummarizesPaymentRequestLog(t *testing.T) {
+	alert := Alert{
+		SourceName: "server-1",
+		Path:       "/logs/2026-08-21/app.log",
+		Offset:     10,
+		ObservedAt: time.Date(2026, 8, 21, 14, 9, 34, 0, time.UTC),
+		Lines: []string{
+			"2026-08-21T14:09:34.643+0530\t\x1b[31mERROR\x1b[0m\tpaymentchannel/http_request.go:162\tpayment channel http request failed\t{\"method\":\"POST\",\"request_url\":\"https://pay.example.com/payout/balance?sign=URLSIGN\",\"request_params\":\"{\\\"merchantNo\\\":\\\"M1001\\\",\\\"sign\\\":\\\"REQSIGN\\\",\\\"secretKey\\\":\\\"SECRETKEY\\\",\\\"body\\\":\\\"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\\\"}\",\"request_params_truncated\":false,\"response_status_code\":403,\"response_status\":\"403 Forbidden\",\"response_params\":\"{\\\"code\\\":403,\\\"message\\\":\\\"ip forbidden\\\",\\\"sign\\\":\\\"RESPSIGN\\\"}\",\"response_params_truncated\":false,\"error\":\"payment channel http status 403\"}",
+		},
+	}
+
+	got := FormatAlert(alert)
+	for _, want := range []string{
+		"级别: ERROR",
+		"调用位置: paymentchannel/http_request.go:162",
+		"消息: payment channel http request failed",
+		"请求: POST https://pay.example.com/payout/balance",
+		"HTTP状态: 403 403 Forbidden",
+		"错误: payment channel http status 403",
+		"请求参数: ",
+		"响应摘要: ",
+		"merchantNo",
+		"[已隐藏]",
+		"(已截断)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected %q in summarized alert, got:\n%s", want, got)
+		}
+	}
+	for _, secret := range []string{"URLSIGN", "REQSIGN", "SECRETKEY", "RESPSIGN", "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"} {
+		if strings.Contains(got, secret) {
+			t.Fatalf("expected secret/long payload %q to be hidden or truncated, got:\n%s", secret, got)
+		}
+	}
+}
+
+func TestFormatAlertSummarizesFormRequestParams(t *testing.T) {
+	alert := Alert{
+		SourceName: "server-1",
+		Path:       "/logs/2026-08-21/app.log",
+		Offset:     10,
+		ObservedAt: time.Date(2026, 8, 21, 14, 9, 34, 0, time.UTC),
+		Lines: []string{
+			"2026-08-21T14:09:34.870+0530\tERROR\tpaymentchannel/http_request.go:162\tpayment channel http request failed\t{\"method\":\"POST\",\"request_url\":\"https://api.hhpays.neterror/payout/balance\",\"request_params\":\"merchant=M1784018428980&sign=FORM_SIGN\",\"response_nil\":true,\"error\":\"Post \\\"https://api.hhpays.neterror/payout/balance\\\": EOF\"}",
+		},
+	}
+
+	got := FormatAlert(alert)
+	if !strings.Contains(got, "请求参数: merchant=M1784018428980&sign=[已隐藏]") {
+		t.Fatalf("expected concise redacted form params, got:\n%s", got)
+	}
+	if strings.Contains(got, "FORM_SIGN") {
+		t.Fatalf("expected form sign hidden, got:\n%s", got)
+	}
+}
+
+func TestFormatAlertSummarizesGameRequestJSONLog(t *testing.T) {
+	alert := Alert{
+		SourceName: "game-1",
+		Path:       "/logs/2026-08-21/game.log",
+		Offset:     10,
+		ObservedAt: time.Date(2026, 8, 21, 14, 9, 34, 0, time.UTC),
+		Lines: []string{
+			`{"level":"ERROR","time":"2026-08-21T14:09:34.643+0530","caller":"game/http.go:88","msg":"game request failed","method":"POST","path":"/api/game/bet","request":{"orderNo":"O1001","amount":100,"sign":"GAME_SIGN"},"response":{"code":500,"message":"game rejected"}}`,
+		},
+	}
+
+	got := FormatAlert(alert)
+	for _, want := range []string{
+		"级别: ERROR",
+		"调用位置: game/http.go:88",
+		"消息: game request failed",
+		"请求: POST /api/game/bet",
+		"请求参数: ",
+		"响应摘要: ",
+		"orderNo",
+		"game rejected",
+		"[已隐藏]",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected %q in summarized game alert, got:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "GAME_SIGN") {
+		t.Fatalf("expected game request sign hidden, got:\n%s", got)
+	}
+}
+
 func TestFormatResourceAlertUsesChineseFields(t *testing.T) {
 	alert := &ResourceAlert{
 		ServerName:       "server-1",
