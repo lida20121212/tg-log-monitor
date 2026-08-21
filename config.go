@@ -92,6 +92,10 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read config %s: %w", path, err)
 	}
+	data, err = stripJSONComments(data)
+	if err != nil {
+		return nil, fmt.Errorf("parse config comments %s: %w", path, err)
+	}
 
 	var cfg Config
 	dec := json.NewDecoder(strings.NewReader(string(data)))
@@ -110,6 +114,76 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+// stripJSONComments allows the config file to keep Chinese // and /* */ notes.
+func stripJSONComments(data []byte) ([]byte, error) {
+	var out strings.Builder
+	out.Grow(len(data))
+
+	inString := false
+	escaped := false
+	for i := 0; i < len(data); i++ {
+		ch := data[i]
+		if inString {
+			out.WriteByte(ch)
+			if escaped {
+				escaped = false
+				continue
+			}
+			if ch == '\\' {
+				escaped = true
+				continue
+			}
+			if ch == '"' {
+				inString = false
+			}
+			continue
+		}
+
+		if ch == '"' {
+			inString = true
+			out.WriteByte(ch)
+			continue
+		}
+
+		if ch == '/' && i+1 < len(data) {
+			next := data[i+1]
+			if next == '/' {
+				i += 2
+				for i < len(data) && data[i] != '\n' && data[i] != '\r' {
+					i++
+				}
+				if i < len(data) {
+					out.WriteByte(data[i])
+				}
+				continue
+			}
+			if next == '*' {
+				i += 2
+				closed := false
+				for i < len(data) {
+					if data[i] == '\n' || data[i] == '\r' {
+						out.WriteByte(data[i])
+					}
+					if data[i] == '*' && i+1 < len(data) && data[i+1] == '/' {
+						i++
+						closed = true
+						break
+					}
+					i++
+				}
+				if !closed {
+					return nil, fmt.Errorf("unterminated block comment")
+				}
+				continue
+			}
+		}
+
+		out.WriteByte(ch)
+	}
+
+	return []byte(out.String()), nil
 }
 
 func (c *Config) applyDefaults() {

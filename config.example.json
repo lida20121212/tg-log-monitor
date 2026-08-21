@@ -1,19 +1,59 @@
 {
+  // Telegram 机器人配置。
+  // bot_token 从 BotFather 获取；生产环境也可以用 TG_BOT_TOKEN 环境变量覆盖。
   "telegram": {
     "bot_token": "123456:replace-with-your-bot-token",
+
+    // 群 chat_id 通常是负数，例如 -1001234567890；也可以写成数字。
+    // 生产环境也可以用 TG_CHAT_ID 环境变量覆盖。
     "chat_id": "-1001234567890",
+
+    // Telegram 消息解析模式。一般留空即可；需要 Markdown/HTML 时再填写。
     "parse_mode": ""
   },
+
+  // 日志来源列表。监控一台服务器写一个对象，监控多台就继续往数组里加。
+  // 每个 name 必须唯一，TG 消息里会用它区分来源服务器。
   "sources": [
     {
+      // 来源名称，建议写服务器名、业务名或内网 IP，例如 lobby-1。
       "name": "server-1",
+
+      // 日志根目录。程序会按 log_root/date/file_name 拼出日志路径。
+      // Linux 示例：/logs -> /logs/2026-08-21/app.log
+      // Windows 示例：E:\\wwwroot\\t2_lobby_server\\logs
       "log_root": "/logs",
+
+      // 每天目录里的日志文件名。
       "file_name": "app.log",
+
+      // Go 的日期格式模板，不是当天日期，不需要每天改。
+      // 你的目录是 2026-08-21 这种格式，所以固定写 2006-01-02。
       "date_layout": "2006-01-02",
+
+      // 用哪个时区计算“今天”的日期目录。
       "timezone": "Asia/Shanghai"
+
+      // 如果你不按日期目录分日志，可以改用 direct_file 指向单个日志文件。
+      // 使用 direct_file 时会优先读取它，忽略 log_root/date_layout/file_name。
+      // ,"direct_file": "/var/log/app.log"
     }
+
+    // 监控多台服务器时，在上一个对象后加逗号，再加一个 source。
+    // ,
+    // {
+    //   "name": "server-2",
+    //   "log_root": "/mnt/server-2/logs",
+    //   "file_name": "app.log",
+    //   "date_layout": "2006-01-02",
+    //   "timezone": "Asia/Shanghai"
+    // }
   ],
+
+  // 匹配规则：先 include，再 exclude。命中 include 且未命中 exclude 才会发送 TG。
   "match": {
+    // 默认只发送 ERROR / FATAL / PANIC。
+    // JSON 日志会优先识别 level 字段，避免 INFO 文案里含 ERROR 时误报。
     "include_regex": [
       "\"level\"\\s*:\\s*\"ERROR\"",
       "\"level\"\\s*:\\s*\"FATAL\"",
@@ -23,18 +63,42 @@
       "\\bPANIC\\b",
       "panic:"
     ],
+
+    // 排除规则：这里放已知不需要发 TG 的业务错误。
     "exclude_regex": [
+      // 过滤 response.code = 40102。
       "\"response\"\\s*:\\s*\\{[^}\\n]*\"code\"\\s*:\\s*40102\\b",
+
+      // 过滤 Verification failed 且 response.code = 1 的错误。
       "\"error\"\\s*:\\s*\"Verification failed\"\\s*,\\s*\"response\"\\s*:\\s*\\{[^}\\n]*\"code\"\\s*:\\s*1\\b[^}\\n]*\"msg\"\\s*:\\s*\"Verification failed\""
     ],
+
+    // 命中错误后额外附带后续多少行。单行 JSON 日志保持 0 即可。
     "context_lines_after": 0
   },
+
+  // 扫描日志文件的间隔。越小越实时，但会更频繁读文件状态。
   "poll_interval": "2s",
+
+  // TG 发送批处理间隔。短时间多条错误会合并发送，避免刷屏。
   "send_interval": "5s",
+
+  // 每条 TG 消息最多合并多少条日志。
   "max_batch_lines": 20,
+
+  // 读取进度保存文件。重启后从这里记录的 offset 继续读，避免重复推送。
   "state_file": "state.json",
+
+  // true：首次启动从当前日志末尾开始，只监控新增错误。
+  // false：首次启动从文件开头扫描，可能会把历史错误也发到 TG。
   "start_at_end": true,
+
+  // Telegram 单条消息最大字符数，超出会截断，避免发送失败。
   "message_max_chars": 3500,
+
+  // 调用 Telegram API 的 HTTP 超时时间。TG 异常时不会无限卡住本机进程。
   "http_timeout": "5s",
+
+  // true：只在控制台打印，不真正发 TG；测试配置时很好用。
   "dry_run": false
 }

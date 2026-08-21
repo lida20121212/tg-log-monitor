@@ -38,6 +38,8 @@ go build -buildvcs=false -o tg-log-monitor .
 
 ## 配置
 
+`config.example.json` 已带中文注释，程序支持 `//` 和 `/* */` 注释；复制成 `config.json` 后可以直接保留注释运行。
+
 两台服务器建议各自部署一份，只改 `name` 区分来源：
 
 ```json
