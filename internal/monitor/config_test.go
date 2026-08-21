@@ -1,4 +1,4 @@
-package main
+package monitor
 
 import (
 	"os"
@@ -47,7 +47,7 @@ func TestLoadConfigAllowsComments(t *testing.T) {
 }
 
 func TestExampleConfigLoads(t *testing.T) {
-	cfg, err := LoadConfig("config.example.json")
+	cfg, err := LoadConfig(filepath.Join("..", "..", "config.example.json"))
 	if err != nil {
 		t.Fatal(err)
 	}

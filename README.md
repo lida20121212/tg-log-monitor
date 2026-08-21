@@ -27,6 +27,12 @@ go build -buildvcs=false -o tg-log-monitor.exe .
 .\tg-log-monitor.exe -config config.json
 ```
 
+如果只是本地源码调试，现在可以直接运行入口文件：
+
+```powershell
+go run main.go -config .\config.example.json
+```
+
 Linux 服务器：
 
 ```bash
