@@ -35,6 +35,6 @@
   "state_file": "state.json",
   "start_at_end": true,
   "message_max_chars": 3500,
-  "http_timeout": "10s",
+  "http_timeout": "5s",
   "dry_run": false
 }

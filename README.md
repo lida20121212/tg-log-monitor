@@ -82,6 +82,7 @@ export LOG_ROOT='/logs'
 - 重启后按 `state.json` 里的 offset 继续读，避免重复推送。
 - 进程持续运行跨天时，会自动切到新的 `YYYY-MM-DD/app.log`；新日期文件会从开头读，避免漏掉凌晨刚写入的错误。
 - 如果你想首次启动就扫描已有文件，把 `start_at_end` 改成 `false`。
+- TG 连续失败两次后会熔断 1 分钟；队列满时会丢弃尾部告警，避免监控进程被远端故障拖住。
 
 ## systemd
 

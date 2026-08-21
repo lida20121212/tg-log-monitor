@@ -123,7 +123,7 @@ func (c *Config) applyDefaults() {
 		c.SendInterval = "5s"
 	}
 	if c.HTTPTimeout == "" {
-		c.HTTPTimeout = "10s"
+		c.HTTPTimeout = "5s"
 	}
 	if c.MaxBatchLines <= 0 {
 		c.MaxBatchLines = 20

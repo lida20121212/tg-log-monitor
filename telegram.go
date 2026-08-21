@@ -16,6 +16,14 @@ type Sender interface {
 	MaxChars() int
 }
 
+type sendCircuit struct {
+	consecutiveFailures int
+	threshold           int
+	cooldown            time.Duration
+	openUntil           time.Time
+	lastOpenLogUntil    time.Time
+}
+
 type TelegramClient struct {
 	token     string
 	chatID    int64
@@ -27,7 +35,7 @@ type TelegramClient struct {
 
 func NewTelegramClient(cfg TelegramConfig, timeout time.Duration, maxChars int, dryRun bool) *TelegramClient {
 	if timeout <= 0 {
-		timeout = 10 * time.Second
+		timeout = 5 * time.Second
 	}
 	if maxChars <= 0 || maxChars > 4000 {
 		maxChars = 3500
@@ -40,6 +48,55 @@ func NewTelegramClient(cfg TelegramConfig, timeout time.Duration, maxChars int, 
 		maxChars:  maxChars,
 		dryRun:    dryRun,
 	}
+}
+
+func newSendCircuit(threshold int, cooldown time.Duration) *sendCircuit {
+	if threshold <= 0 {
+		threshold = 2
+	}
+	if cooldown <= 0 {
+		cooldown = time.Minute
+	}
+	return &sendCircuit{
+		threshold: threshold,
+		cooldown:  cooldown,
+	}
+}
+
+func (c *sendCircuit) isOpen(now time.Time) bool {
+	return !c.openUntil.IsZero() && now.Before(c.openUntil)
+}
+
+func (c *sendCircuit) remaining(now time.Time) time.Duration {
+	if !c.isOpen(now) {
+		return 0
+	}
+	return c.openUntil.Sub(now)
+}
+
+func (c *sendCircuit) shouldLogOpen(now time.Time) bool {
+	return c.isOpen(now) && !c.lastOpenLogUntil.Equal(c.openUntil)
+}
+
+func (c *sendCircuit) markOpenLogged() {
+	c.lastOpenLogUntil = c.openUntil
+}
+
+func (c *sendCircuit) recordSuccess() {
+	c.consecutiveFailures = 0
+	c.openUntil = time.Time{}
+	c.lastOpenLogUntil = time.Time{}
+}
+
+func (c *sendCircuit) recordFailure(now time.Time) bool {
+	c.consecutiveFailures++
+	if c.consecutiveFailures < c.threshold {
+		return false
+	}
+	c.consecutiveFailures = 0
+	c.openUntil = now.Add(c.cooldown)
+	c.lastOpenLogUntil = time.Time{}
+	return true
 }
 
 func (c *TelegramClient) MaxChars() int {
@@ -89,9 +146,12 @@ func (c *TelegramClient) Send(ctx context.Context, text string) error {
 	return nil
 }
 
-func RunBatcher(ctx context.Context, alerts <-chan Alert, sender Sender, interval time.Duration, maxBatch int, logger *log.Logger) {
+func RunBatcher(ctx context.Context, alerts <-chan Alert, sender Sender, interval, sendTimeout time.Duration, maxBatch int, logger *log.Logger) {
 	if interval <= 0 {
 		interval = 5 * time.Second
+	}
+	if sendTimeout <= 0 {
+		sendTimeout = 5 * time.Second
 	}
 	if maxBatch <= 0 {
 		maxBatch = 20
@@ -100,18 +160,35 @@ func RunBatcher(ctx context.Context, alerts <-chan Alert, sender Sender, interva
 	timer := time.NewTimer(interval)
 	defer timer.Stop()
 
+	circuit := newSendCircuit(2, time.Minute)
 	var batch []Alert
 	flush := func() {
 		if len(batch) == 0 {
 			return
 		}
+		now := time.Now()
+		if circuit.isOpen(now) {
+			if circuit.shouldLogOpen(now) {
+				logger.Printf("telegram circuit open for %s; dropping %d queued message(s)", circuit.remaining(now).Truncate(time.Second), len(batch))
+				circuit.markOpenLogged()
+			}
+			batch = batch[:0]
+			return
+		}
 		messages := BuildMessages(batch, sender.MaxChars())
 		for _, msg := range messages {
-			sendCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-			if err := sender.Send(sendCtx, msg); err != nil {
-				logger.Printf("telegram send failed: %v", err)
-			}
+			sendCtx, cancel := context.WithTimeout(context.Background(), sendTimeout)
+			err := sender.Send(sendCtx, msg)
 			cancel()
+			if err != nil {
+				if circuit.recordFailure(time.Now()) {
+					logger.Printf("telegram circuit opened after %d consecutive failures; cooling down for %s", circuit.threshold, circuit.cooldown)
+				}
+				logger.Printf("telegram send failed: %v", err)
+				batch = batch[:0]
+				return
+			}
+			circuit.recordSuccess()
 		}
 		batch = batch[:0]
 	}

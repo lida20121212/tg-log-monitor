@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -77,5 +78,42 @@ func TestTailerStartsAtEndThenAlertsOnAppend(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("expected appended error alert")
+	}
+}
+
+func TestTailerDropsWhenAlertQueueFull(t *testing.T) {
+	matcher, err := NewMatcher(MatchConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	alerts := make(chan Alert, 1)
+	alerts <- Alert{SourceName: "prefill"}
+
+	tailer := &sourceTailer{
+		source:      SourceConfig{Name: "server-1"},
+		matcher:     matcher,
+		alerts:      alerts,
+		logger:      log.New(io.Discard, "", 0),
+		currentPath: "/tmp/app.log",
+	}
+
+	done := make(chan struct{})
+	go func() {
+		tailer.processLine(`{"level":"ERROR","msg":"boom"}`, 123)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("processLine blocked on full alert queue")
+	}
+
+	if got := len(alerts); got != 1 {
+		t.Fatalf("expected queue length 1, got %d", got)
+	}
+	if tailer.droppedAlerts != 1 {
+		t.Fatalf("expected 1 dropped alert, got %d", tailer.droppedAlerts)
 	}
 }

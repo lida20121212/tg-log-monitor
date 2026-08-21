@@ -56,7 +56,7 @@ func main() {
 	sendWG.Add(1)
 	go func() {
 		defer sendWG.Done()
-		RunBatcher(ctx, alerts, sender, cfg.SendDuration(), cfg.MaxBatchLines, logger)
+		RunBatcher(ctx, alerts, sender, cfg.SendDuration(), cfg.HTTPTimeoutDuration(), cfg.MaxBatchLines, logger)
 	}()
 
 	tailWG.Wait()

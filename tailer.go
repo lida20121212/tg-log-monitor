@@ -32,6 +32,7 @@ type sourceTailer struct {
 	pendingAlert  *Alert
 	pendingLeft   int
 	openedOnce    bool
+	droppedAlerts int
 }
 
 func TailSource(ctx context.Context, cfg *Config, source SourceConfig, store *StateStore, matcher *Matcher, alerts chan<- Alert, logger *log.Logger, once bool) {
@@ -209,7 +210,7 @@ func (t *sourceTailer) processLine(line string, lineOffset int64) {
 		Lines:      []string{line},
 	}
 	if t.matcher.ContextLinesAfter() == 0 {
-		t.alerts <- *alert
+		t.enqueueAlert(*alert)
 		return
 	}
 	t.pendingAlert = alert
@@ -226,7 +227,20 @@ func (t *sourceTailer) emitPending() {
 	if t.pendingAlert == nil {
 		return
 	}
-	t.alerts <- *t.pendingAlert
+	t.enqueueAlert(*t.pendingAlert)
 	t.pendingAlert = nil
 	t.pendingLeft = 0
+}
+
+func (t *sourceTailer) enqueueAlert(alert Alert) bool {
+	select {
+	case t.alerts <- alert:
+		return true
+	default:
+		t.droppedAlerts++
+		if t.droppedAlerts == 1 || t.droppedAlerts%100 == 0 {
+			t.logger.Printf("[%s] alert queue full, dropped %d alert(s)", t.source.Name, t.droppedAlerts)
+		}
+		return false
+	}
 }
