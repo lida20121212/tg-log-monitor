@@ -48,6 +48,19 @@ func TestMatcherMatchesConsoleError(t *testing.T) {
 	}
 }
 
+func TestDefaultMatcherMatchesZapConsoleError(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := "2026-08-21T13:58:15.532+0530\tERROR\tpaymentchannel/http_request.go:162\tpayment channel http request failed\t{\"response_status_code\":502,\"error\":\"payment channel http status 502\"}"
+	if !m.Match(line) {
+		t.Fatal("expected zap console ERROR to match")
+	}
+}
+
 func TestMatcherExcludeWins(t *testing.T) {
 	m, err := NewMatcher(MatchConfig{
 		IncludeRegex: []string{`\bERROR\b`},

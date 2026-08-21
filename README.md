@@ -42,6 +42,12 @@ go build -buildvcs=false -o tg-log-monitor .
 ./tg-log-monitor -config config.json
 ```
 
+先测试 TG bot 和 chat_id 是否可用：
+
+```bash
+./tg-log-monitor -config config.json -test-telegram
+```
+
 ## 配置
 
 `config.example.json` 已带中文注释，程序支持 `//` 和 `/* */` 注释；复制成 `config.json` 后可以直接保留注释运行。
@@ -91,6 +97,12 @@ export LOG_ROOT='/logs'
 - 进程持续运行跨天时，会自动切到新的 `YYYY-MM-DD/app.log`；新日期文件会从开头读，避免漏掉凌晨刚写入的错误。
 - 如果你想首次启动就扫描已有文件，把 `start_at_end` 改成 `false`。
 - TG 连续失败两次后会熔断 1 分钟；队列满时会丢弃尾部告警，避免监控进程被远端故障拖住。
+
+如果启动后看到 `watching ... from offset 10290962`，表示会从这个 offset 后面继续读，之前已有的历史错误不会再发送。实时测试可以在监控进程运行时追加一条新 ERROR：
+
+```bash
+printf '%s\tERROR\ttg-test/manual.go:1\ttg monitor live test\t{"error":"manual test"}\n' "$(date '+%Y-%m-%dT%H:%M:%S.000%z')" >> /www/wwwroot/t2_lobby_server/logs/$(date +%F)/app.log
+```
 
 ## systemd
 

@@ -47,14 +47,17 @@ func TestLoadConfigAllowsComments(t *testing.T) {
 }
 
 func TestExampleConfigLoads(t *testing.T) {
+	t.Setenv("DRY_RUN", "1")
 	cfg, err := LoadConfig(filepath.Join("..", "..", "config.example.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cfg.Sources) != 1 {
-		t.Fatalf("sources length = %d, want 1", len(cfg.Sources))
+	if len(cfg.Sources) == 0 {
+		t.Fatal("expected at least one source")
 	}
-	if got := cfg.Sources[0].DateLayout; got != "2006-01-02" {
-		t.Fatalf("date_layout = %q, want 2006-01-02", got)
+	for i, source := range cfg.Sources {
+		if got := source.DateLayout; got != "2006-01-02" {
+			t.Fatalf("sources[%d].date_layout = %q, want 2006-01-02", i, got)
+		}
 	}
 }
