@@ -3,6 +3,7 @@ package monitor
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -45,6 +46,9 @@ func FormatAlert(alert Alert) string {
 	b.WriteString("[ERROR LOG]\n")
 	b.WriteString("server: ")
 	b.WriteString(alert.SourceName)
+	b.WriteString("\n")
+	b.WriteString("log: ")
+	b.WriteString(filepath.Base(alert.Path))
 	b.WriteString("\n")
 	b.WriteString("file: ")
 	b.WriteString(alert.Path)

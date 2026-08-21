@@ -36,6 +36,9 @@ func TestFormatAlertIncludesZapStacktrace(t *testing.T) {
 		},
 	}
 	got := FormatAlert(alert)
+	if !strings.Contains(got, "log: app.log") {
+		t.Fatalf("expected log file name in formatted alert, got:\n%s", got)
+	}
 	if !strings.Contains(got, "stacktrace: main.main") {
 		t.Fatalf("expected stacktrace in formatted alert, got:\n%s", got)
 	}
