@@ -55,9 +55,9 @@ func TestDefaultMatcherMatchesZapConsoleError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	line := "2026-08-21T13:58:15.532+0530\tERROR\tpaymentchannel/http_request.go:162\tpayment channel http request failed\t{\"response_status_code\":502,\"error\":\"payment channel http status 502\"}"
+	line := "2026-08-21T13:58:15.532+0530\t\x1b[31mERROR\x1b[0m\tpaymentchannel/http_request.go:162\tpayment channel http request failed\t{\"response_status_code\":502,\"error\":\"payment channel http status 502\"}"
 	if !m.Match(line) {
-		t.Fatal("expected zap console ERROR to match")
+		t.Fatal("expected colored zap console ERROR to match")
 	}
 }
 

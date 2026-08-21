@@ -2,11 +2,11 @@
   // Telegram 机器人配置。
   // bot_token 从 BotFather 获取；生产环境也可以用 TG_BOT_TOKEN 环境变量覆盖。
   "telegram": {
-    "bot_token": "8265570166:AAEs2gmILv0ghnRjXygacx3ZgbjSAJaE6NE",
+    "bot_token": "你的 bot token",
 
     // 群 chat_id 通常是负数，例如 -1001234567890；也可以写成数字。
     // 生产环境也可以用 TG_CHAT_ID 环境变量覆盖。
-    "chat_id": "-5524023355",
+    "chat_id": "-1001234567890",
 
     // Telegram 消息解析模式。一般留空即可；需要 Markdown/HTML 时再填写。
     "parse_mode": ""
@@ -19,13 +19,15 @@
       // 来源名称，建议写服务器名、业务名或内网 IP，例如 lobby-1。
       "name": "server-1",
 
-      // 日志根目录。程序会按 log_root/date/file_name 拼出日志路径。
-      // Linux 示例：/logs -> /logs/2026-08-21/app.log
+      // 日志根目录。程序会按 log_root/date/file_pattern 扫描日志路径。
+      // Linux 示例：/logs -> /logs/2026-08-21/*.log
       // Windows 示例：E:\\wwwroot\\t2_lobby_server\\logs
       "log_root": "E:\\wwwroot\\t2_lobby_server\\logs",
 
-      // 每天目录里的日志文件名。
-      "file_name": "app.log",
+      // 每天日期目录里要监听的日志文件匹配规则。
+      // 默认写 *.log，表示监听该日期目录下所有 .log 结尾文件。
+      // 如果只想监听单个文件，也可以改成 "app.log"，或使用旧字段 file_name。
+      "file_pattern": "*.log",
 
       // Go 的日期格式模板，不是当天日期，不需要每天改。
       // 你的目录是 2026-08-21 这种格式，所以固定写 2006-01-02。
@@ -35,20 +37,22 @@
       "timezone": "Asia/Shanghai"
 
       // 如果你不按日期目录分日志，可以改用 direct_file 指向单个日志文件。
-      // 使用 direct_file 时会优先读取它，忽略 log_root/date_layout/file_name。
+      // 使用 direct_file 时会优先读取它，忽略 log_root/date_layout/file_pattern/file_name。
       // ,"direct_file": "/var/log/app.log"
     },
-        {
+    {
       // 来源名称，建议写服务器名、业务名或内网 IP，例如 lobby-1。
       "name": "serveradmin-1",
 
-      // 日志根目录。程序会按 log_root/date/file_name 拼出日志路径。
-      // Linux 示例：/logs -> /logs/2026-08-21/app.log
+      // 日志根目录。程序会按 log_root/date/file_pattern 扫描日志路径。
+      // Linux 示例：/logs -> /logs/2026-08-21/*.log
       // Windows 示例：E:\\wwwroot\\t2_lobby_server\\logs
       "log_root": "E:\\wwwroot\\t2_lobby_admin\\go-admin\\temp\\logs",
 
-      // 每天目录里的日志文件名。
-      "file_name": "app.log",
+      // 每天日期目录里要监听的日志文件匹配规则。
+      // 默认写 *.log，表示监听该日期目录下所有 .log 结尾文件。
+      // 如果只想监听单个文件，也可以改成 "app.log"，或使用旧字段 file_name。
+      "file_pattern": "*.log",
 
       // Go 的日期格式模板，不是当天日期，不需要每天改。
       // 你的目录是 2026-08-21 这种格式，所以固定写 2006-01-02。
@@ -58,7 +62,7 @@
       "timezone": "Asia/Shanghai"
 
       // 如果你不按日期目录分日志，可以改用 direct_file 指向单个日志文件。
-      // 使用 direct_file 时会优先读取它，忽略 log_root/date_layout/file_name。
+      // 使用 direct_file 时会优先读取它，忽略 log_root/date_layout/file_pattern/file_name。
       // ,"direct_file": "/var/log/app.log"
     }
 
@@ -67,7 +71,7 @@
     // {
     //   "name": "server-2",
     //   "log_root": "/mnt/server-2/logs",
-    //   "file_name": "app.log",
+    //   "file_pattern": "*.log",
     //   "date_layout": "2006-01-02",
     //   "timezone": "Asia/Shanghai"
     // }

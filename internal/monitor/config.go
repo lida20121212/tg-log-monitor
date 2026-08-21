@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -33,12 +34,13 @@ type TelegramConfig struct {
 }
 
 type SourceConfig struct {
-	Name       string `json:"name"`
-	LogRoot    string `json:"log_root"`
-	FileName   string `json:"file_name"`
-	DateLayout string `json:"date_layout"`
-	Timezone   string `json:"timezone"`
-	DirectFile string `json:"direct_file"`
+	Name        string `json:"name"`
+	LogRoot     string `json:"log_root"`
+	FileName    string `json:"file_name"`
+	FilePattern string `json:"file_pattern"`
+	DateLayout  string `json:"date_layout"`
+	Timezone    string `json:"timezone"`
+	DirectFile  string `json:"direct_file"`
 }
 
 type MatchConfig struct {
@@ -232,8 +234,8 @@ func (c *Config) applyDefaults() {
 		if strings.TrimSpace(c.Sources[i].Name) == "" {
 			c.Sources[i].Name = fmt.Sprintf("server-%d", i+1)
 		}
-		if c.Sources[i].FileName == "" {
-			c.Sources[i].FileName = "app.log"
+		if strings.TrimSpace(c.Sources[i].FileName) == "" && strings.TrimSpace(c.Sources[i].FilePattern) == "" {
+			c.Sources[i].FilePattern = "*.log"
 		}
 		if c.Sources[i].DateLayout == "" {
 			c.Sources[i].DateLayout = "2006-01-02"
@@ -278,10 +280,10 @@ func (c *Config) applyEnv() {
 	if envLogRoot != "" {
 		if len(c.Sources) == 0 {
 			c.Sources = []SourceConfig{{
-				Name:       "server-1",
-				LogRoot:    envLogRoot,
-				FileName:   "app.log",
-				DateLayout: "2006-01-02",
+				Name:        "server-1",
+				LogRoot:     envLogRoot,
+				FilePattern: "*.log",
+				DateLayout:  "2006-01-02",
 			}}
 		} else {
 			c.Sources[0].LogRoot = envLogRoot
@@ -290,9 +292,9 @@ func (c *Config) applyEnv() {
 	if envServerName != "" {
 		if len(c.Sources) == 0 {
 			c.Sources = []SourceConfig{{
-				Name:       envServerName,
-				FileName:   "app.log",
-				DateLayout: "2006-01-02",
+				Name:        envServerName,
+				FilePattern: "*.log",
+				DateLayout:  "2006-01-02",
 			}}
 		} else {
 			c.Sources[0].Name = envServerName
@@ -373,10 +375,45 @@ func (s SourceConfig) Location() (*time.Location, error) {
 	return time.LoadLocation(s.Timezone)
 }
 
-func (s SourceConfig) CurrentPath(now time.Time) string {
+func (s SourceConfig) CurrentPaths(now time.Time) ([]string, error) {
 	if strings.TrimSpace(s.DirectFile) != "" {
-		return filepath.Clean(s.DirectFile)
+		return []string{filepath.Clean(s.DirectFile)}, nil
 	}
 	date := now.Format(s.DateLayout)
-	return filepath.Join(s.LogRoot, date, s.FileName)
+	dir := filepath.Join(s.LogRoot, date)
+	pattern := s.LogPattern()
+	pathPattern := filepath.Join(dir, pattern)
+
+	if !hasGlobMagic(pattern) {
+		return []string{filepath.Clean(pathPattern)}, nil
+	}
+
+	paths, err := filepath.Glob(pathPattern)
+	if err != nil {
+		return nil, fmt.Errorf("glob %s: %w", pathPattern, err)
+	}
+	sort.Strings(paths)
+	files := make([]string, 0, len(paths))
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil || info.IsDir() {
+			continue
+		}
+		files = append(files, filepath.Clean(path))
+	}
+	return files, nil
+}
+
+func (s SourceConfig) LogPattern() string {
+	if strings.TrimSpace(s.FilePattern) != "" {
+		return strings.TrimSpace(s.FilePattern)
+	}
+	if strings.TrimSpace(s.FileName) != "" {
+		return strings.TrimSpace(s.FileName)
+	}
+	return "*.log"
+}
+
+func hasGlobMagic(pattern string) bool {
+	return strings.ContainsAny(pattern, "*?[")
 }

@@ -53,7 +53,7 @@ func (m *Matcher) ContextLinesAfter() int {
 }
 
 func (m *Matcher) Match(line string) bool {
-	line = strings.TrimSpace(line)
+	line = strings.TrimSpace(stripANSI(line))
 	if line == "" {
 		return false
 	}

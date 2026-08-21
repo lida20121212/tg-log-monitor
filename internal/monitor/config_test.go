@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestLoadConfigAllowsComments(t *testing.T) {
@@ -43,6 +44,64 @@ func TestLoadConfigAllowsComments(t *testing.T) {
 	}
 	if !cfg.DryRun {
 		t.Fatal("expected dry_run=true")
+	}
+}
+
+func TestSourceCurrentPathsMatchesAllLogFiles(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "2026-08-21")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"b.log", "a.log", "skip.txt"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("test\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	source := SourceConfig{
+		Name:        "server-1",
+		LogRoot:     root,
+		FilePattern: "*.log",
+		DateLayout:  "2006-01-02",
+	}
+	now := time.Date(2026, 8, 21, 12, 0, 0, 0, time.Local)
+	paths, err := source.CurrentPaths(now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{
+		filepath.Join(dir, "a.log"),
+		filepath.Join(dir, "b.log"),
+	}
+	if len(paths) != len(want) {
+		t.Fatalf("paths len = %d, want %d: %#v", len(paths), len(want), paths)
+	}
+	for i := range want {
+		if paths[i] != filepath.Clean(want[i]) {
+			t.Fatalf("paths[%d] = %q, want %q", i, paths[i], filepath.Clean(want[i]))
+		}
+	}
+}
+
+func TestSourceCurrentPathsKeepsLegacyFileName(t *testing.T) {
+	source := SourceConfig{
+		Name:       "server-1",
+		LogRoot:    `C:\logs`,
+		FileName:   "app.log",
+		DateLayout: "2006-01-02",
+	}
+	now := time.Date(2026, 8, 21, 12, 0, 0, 0, time.Local)
+	paths, err := source.CurrentPaths(now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 1 {
+		t.Fatalf("paths len = %d, want 1", len(paths))
+	}
+	if got := filepath.Base(paths[0]); got != "app.log" {
+		t.Fatalf("base path = %q, want app.log", got)
 	}
 }
 

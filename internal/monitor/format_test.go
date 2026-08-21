@@ -40,3 +40,22 @@ func TestFormatAlertIncludesZapStacktrace(t *testing.T) {
 		t.Fatalf("expected stacktrace in formatted alert, got:\n%s", got)
 	}
 }
+
+func TestFormatAlertStripsANSIColorCodes(t *testing.T) {
+	alert := Alert{
+		SourceName: "server-1",
+		Path:       "/logs/2026-08-21/app.log",
+		Offset:     10,
+		ObservedAt: time.Date(2026, 8, 21, 14, 9, 34, 0, time.UTC),
+		Lines: []string{
+			"2026-08-21T14:09:34.643+0530\t\x1b[31mERROR\x1b[0m\tpaymentchannel/http_request.go:162\tpayment channel http request failed",
+		},
+	}
+	got := FormatAlert(alert)
+	if strings.Contains(got, "\x1b[") {
+		t.Fatalf("expected ANSI color codes stripped, got:\n%s", got)
+	}
+	if !strings.Contains(got, "\tERROR\t") {
+		t.Fatalf("expected readable ERROR level, got:\n%s", got)
+	}
+}

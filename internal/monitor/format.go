@@ -63,13 +63,17 @@ func formatLogLines(lines []string) string {
 	if len(lines) == 0 {
 		return ""
 	}
-	if summary := summarizeJSONLog(lines[0]); summary != "" {
+	cleaned := make([]string, 0, len(lines))
+	for _, line := range lines {
+		cleaned = append(cleaned, stripANSI(line))
+	}
+	if summary := summarizeJSONLog(cleaned[0]); summary != "" {
 		if len(lines) > 1 {
-			return summary + "\ncontext:\n" + strings.Join(lines[1:], "\n")
+			return summary + "\ncontext:\n" + strings.Join(cleaned[1:], "\n")
 		}
 		return summary
 	}
-	return strings.Join(lines, "\n")
+	return strings.Join(cleaned, "\n")
 }
 
 func summarizeJSONLog(line string) string {

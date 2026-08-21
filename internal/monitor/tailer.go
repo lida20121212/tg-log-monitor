@@ -17,6 +17,18 @@ type Alert struct {
 	Lines      []string
 }
 
+type sourceWatcher struct {
+	cfg             *Config
+	source          SourceConfig
+	store           *StateStore
+	matcher         *Matcher
+	alerts          chan<- Alert
+	logger          *log.Logger
+	location        *time.Location
+	tailers         map[string]*sourceTailer
+	initialScanDone bool
+}
+
 type sourceTailer struct {
 	cfg           *Config
 	source        SourceConfig
@@ -31,7 +43,6 @@ type sourceTailer struct {
 	partialOffset int64
 	pendingAlert  *Alert
 	pendingLeft   int
-	openedOnce    bool
 	droppedAlerts int
 }
 
@@ -42,7 +53,7 @@ func TailSource(ctx context.Context, cfg *Config, source SourceConfig, store *St
 		return
 	}
 
-	t := &sourceTailer{
+	w := &sourceWatcher{
 		cfg:      cfg,
 		source:   source,
 		store:    store,
@@ -50,14 +61,15 @@ func TailSource(ctx context.Context, cfg *Config, source SourceConfig, store *St
 		alerts:   alerts,
 		logger:   logger,
 		location: loc,
+		tailers:  map[string]*sourceTailer{},
 	}
 
 	ticker := time.NewTicker(cfg.PollDuration())
 	defer ticker.Stop()
-	defer t.flushPending()
+	defer w.flushPending()
 
 	for {
-		t.poll(ctx)
+		w.poll(ctx)
 		if once {
 			return
 		}
@@ -69,13 +81,69 @@ func TailSource(ctx context.Context, cfg *Config, source SourceConfig, store *St
 	}
 }
 
-func (t *sourceTailer) poll(ctx context.Context) {
-	now := time.Now().In(t.location)
-	path := t.source.CurrentPath(now)
-	if path != t.currentPath {
-		t.switchPath(path)
+func (w *sourceWatcher) poll(ctx context.Context) {
+	now := time.Now().In(w.location)
+	paths, err := w.source.CurrentPaths(now)
+	if err != nil {
+		w.logger.Printf("[%s] resolve log files failed: %v", w.source.Name, err)
+		return
 	}
 
+	seen := make(map[string]bool, len(paths))
+	for _, path := range paths {
+		seen[path] = true
+		tailer := w.tailers[path]
+		if tailer == nil {
+			tailer = w.newTailer(path)
+			w.tailers[path] = tailer
+		}
+		tailer.poll(ctx)
+	}
+
+	for path, tailer := range w.tailers {
+		if !seen[path] {
+			tailer.flushPending()
+			delete(w.tailers, path)
+		}
+	}
+	w.initialScanDone = true
+}
+
+func (w *sourceWatcher) newTailer(path string) *sourceTailer {
+	var offset int64
+	if state, ok := w.store.Get(w.source.Name, path); ok {
+		offset = state.Offset
+	} else if w.cfg.ShouldStartAtEnd() && !w.initialScanDone {
+		if info, err := os.Stat(path); err == nil {
+			offset = info.Size()
+			w.store.Set(w.source.Name, path, offset, info.Size())
+			if err := w.store.Save(); err != nil {
+				w.logger.Printf("[%s] save initial state failed: %v", w.source.Name, err)
+			}
+		}
+	}
+
+	w.logger.Printf("[%s] watching %s from offset %d", w.source.Name, path, offset)
+	return &sourceTailer{
+		cfg:         w.cfg,
+		source:      w.source,
+		store:       w.store,
+		matcher:     w.matcher,
+		alerts:      w.alerts,
+		logger:      w.logger,
+		location:    w.location,
+		currentPath: path,
+		offset:      offset,
+	}
+}
+
+func (w *sourceWatcher) flushPending() {
+	for _, tailer := range w.tailers {
+		tailer.flushPending()
+	}
+}
+
+func (t *sourceTailer) poll(ctx context.Context) {
 	f, err := os.Open(t.currentPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -129,32 +197,6 @@ func (t *sourceTailer) poll(ctx context.Context) {
 	if err := t.store.Save(); err != nil {
 		t.logger.Printf("[%s] save state failed: %v", t.source.Name, err)
 	}
-}
-
-func (t *sourceTailer) switchPath(path string) {
-	t.flushPending()
-	t.partial = ""
-	t.partialOffset = 0
-
-	var offset int64
-	if state, ok := t.store.Get(t.source.Name, path); ok {
-		offset = state.Offset
-	} else if t.openedOnce && t.currentPath != "" && t.source.DirectFile == "" {
-		offset = 0
-	} else if t.cfg.ShouldStartAtEnd() {
-		if info, err := os.Stat(path); err == nil {
-			offset = info.Size()
-			t.store.Set(t.source.Name, path, offset, info.Size())
-			if err := t.store.Save(); err != nil {
-				t.logger.Printf("[%s] save initial state failed: %v", t.source.Name, err)
-			}
-		}
-	}
-
-	t.currentPath = path
-	t.offset = offset
-	t.openedOnce = true
-	t.logger.Printf("[%s] watching %s from offset %d", t.source.Name, path, offset)
 }
 
 func (t *sourceTailer) processBytes(data []byte, chunkOffset int64) {

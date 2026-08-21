@@ -1,11 +1,12 @@
 # TG Error Log Monitor
 
-独立 Go 小工具：监控每天分目录的 `app.log`，只读取新增内容，匹配错误日志后发送到 Telegram 群。
+独立 Go 小工具：监控每天分目录下所有 `.log` 文件，只读取新增内容，匹配错误日志后发送到 Telegram 群。
 
 适配你现在的日志目录：
 
 ```text
 /logs/2026-08-11/app.log
+/logs/2026-08-11/server.log
 E:\wwwroot\t2_lobby_server\logs\2026-08-10\app.log
 ```
 
@@ -16,6 +17,7 @@ E:\wwwroot\t2_lobby_server\logs\2026-08-10\app.log
 ```
 
 默认匹配 `level=ERROR/FATAL/PANIC` 的 JSON 日志；非 JSON 旧格式匹配单行里的大写 `ERROR/FATAL/PANIC` 或 `panic:`。
+同时支持 zap console 格式，例如 `2026-08-21T14:09:34.643+0530	ERROR	paymentchannel/http_request.go:162	...`；日志里带 ANSI 颜色码时会自动清理后再匹配和发送。
 默认排除 `"response": {"code":40102` 和 `"error": "Verification failed", "response": {"code":1,"msg":"Verification failed"` 这类已知业务错误，不发送到 TG 群。
 
 ## 使用
@@ -65,7 +67,7 @@ go build -buildvcs=false -o tg-log-monitor .
     {
       "name": "server-1",
       "log_root": "/logs",
-      "file_name": "app.log",
+      "file_pattern": "*.log",
       "date_layout": "2006-01-02",
       "timezone": "Asia/Shanghai"
     }
@@ -80,6 +82,9 @@ Windows 本地路径示例：
 "log_root": "E:\\wwwroot\\t2_lobby_server\\logs"
 ```
 
+默认会扫描 `log_root/<今天日期>/*.log`。如果你现在的配置里还有旧字段 `"file_name": "app.log"`，程序会继续只监听这个单文件；要改成监听目录下全部 `.log`，把它换成 `"file_pattern": "*.log"`。
+`file_pattern` 也可以写成 `"server-*.log"` 这类更窄的匹配规则。
+
 也可以用环境变量覆盖：
 
 ```bash
@@ -92,9 +97,9 @@ export LOG_ROOT='/logs'
 
 ## 新增日志规则
 
-- 第一次启动时，默认从当前 `app.log` 文件末尾开始读，不会把历史错误全部发到群。
+- 第一次启动时，默认从当前日期目录下已存在的 `.log` 文件末尾开始读，不会把历史错误全部发到群。
 - 重启后按 `state.json` 里的 offset 继续读，避免重复推送。
-- 进程持续运行跨天时，会自动切到新的 `YYYY-MM-DD/app.log`；新日期文件会从开头读，避免漏掉凌晨刚写入的错误。
+- 进程持续运行跨天时，会自动扫描新的 `YYYY-MM-DD/*.log`；新日期或运行中新出现的 `.log` 文件会从开头读，避免漏掉刚写入的错误。
 - 如果你想首次启动就扫描已有文件，把 `start_at_end` 改成 `false`。
 - TG 连续失败两次后会熔断 1 分钟；队列满时会丢弃尾部告警，避免监控进程被远端故障拖住。
 
@@ -116,3 +121,4 @@ sudo journalctl -u tg-log-monitor -f
 ```
 
 补充日志格式后，可以把 `include_regex` 收紧到你的真实错误字段，减少误报。
+如果 console 错误后面会跟多行堆栈，把 `context_lines_after` 改成 `6` 或 `8` 可以一起带上后续堆栈行。
