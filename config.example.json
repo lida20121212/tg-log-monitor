@@ -126,6 +126,9 @@
       // 过滤 response.code = 40102。
       "\"response\"\\s*:\\s*\\{[^}\\n]*\"code\"\\s*:\\s*40102\\b",
 
+      // 过滤 response.code = 40205。
+      "\"response\"\\s*:\\s*\\{[^}\\n]*\"code\"\\s*:\\s*40205\\b",
+
       // 过滤 Verification failed 且 response.code = 1 的错误。
       "\"error\"\\s*:\\s*\"Verification failed\"\\s*,\\s*\"response\"\\s*:\\s*\\{[^}\\n]*\"code\"\\s*:\\s*1\\b[^}\\n]*\"msg\"\\s*:\\s*\"Verification failed\""
 

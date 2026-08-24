@@ -126,6 +126,19 @@ func TestDefaultConfigExcludesDeviceAlreadyRegistered(t *testing.T) {
 	}
 }
 
+func TestDefaultConfigExcludesResponseCode40205(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := `{"level":"ERROR","msg":"login request failed","response":{"code":40205,"msg":"इस डिवाइस पर पहले से ही एक रजिस्टर्ड अकाउंट है। कृपया अपने मोबाइल फ़ोन नंबर का इस्तेमाल करके लॉग इन करें जिसके आखिर में 7050 हो।"}}`
+	if m.Match(line) {
+		t.Fatal("expected response code 40205 error to be excluded")
+	}
+}
+
 func TestDefaultConfigExcludesPaymentChannelErrors(t *testing.T) {
 	cfg := Config{}
 	cfg.applyDefaults()
