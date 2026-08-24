@@ -99,13 +99,15 @@ APP_DIR=/www/wwwroot/tg-log-monitor CONFIG_FILE=config.json BRANCH=main bash dep
 }
 ```
 
+同一台服务器如果同时有两种目录，直接在 `sources` 里再加一个对象就行；`date_layout` 留空表示日志直接在 `log_root` 下，不再拼日期目录。
+
 Windows 本地路径示例：
 
 ```json
 "log_root": "E:\\wwwroot\\t2_lobby_server\\logs"
 ```
 
-默认会扫描 `log_root/<今天日期>/*.log`。如果你现在的配置里还有旧字段 `"file_name": "app.log"`，程序会继续只监听这个单文件；要改成监听目录下全部 `.log`，把它换成 `"file_pattern": "*.log"`。
+默认会扫描 `log_root/<今天日期>/*.log`；如果 `date_layout` 留空，就会直接扫描 `log_root/*.log`。如果你现在的配置里还有旧字段 `"file_name": "app.log"`，程序会继续只监听这个单文件；要改成监听目录下全部 `.log`，把它换成 `"file_pattern": "*.log"`。
 `file_pattern` 也可以写成 `"server-*.log"` 这类更窄的匹配规则。
 
 资源监控只支持 Linux，默认旧配置不写 `resource_monitor` 就不会启用。开启后会轻量采集 CPU、内存、磁盘使用率：

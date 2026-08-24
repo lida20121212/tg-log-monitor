@@ -19,7 +19,8 @@
       // 来源名称，建议写服务器名、业务名或内网 IP，例如 lobby-1。
       "name": "server-1",
 
-      // 日志根目录。程序会按 log_root/date/file_pattern 扫描日志路径。
+      // 日志根目录。程序会按 log_root/date_layout/file_pattern 扫描日志路径。
+      // date_layout 留空时，会直接扫描 log_root/*.log。
       // Linux 示例：/logs -> /logs/2026-08-21/*.log
       // Windows 示例：E:\\wwwroot\\t2_lobby_server\\logs
       "log_root": "E:\\wwwroot\\t2_lobby_server\\logs",
@@ -29,7 +30,7 @@
       // 如果只想监听单个文件，也可以改成 "app.log"，或使用旧字段 file_name。
       "file_pattern": "*.log",
 
-      // Go 的日期格式模板，不是当天日期，不需要每天改。
+      // Go 的日期格式模板。
       // 你的目录是 2026-08-21 这种格式，所以固定写 2006-01-02。
       "date_layout": "2006-01-02",
 
@@ -44,7 +45,8 @@
       // 来源名称，建议写服务器名、业务名或内网 IP，例如 lobby-1。
       "name": "serveradmin-1",
 
-      // 日志根目录。程序会按 log_root/date/file_pattern 扫描日志路径。
+      // 日志根目录。程序会按 log_root/date_layout/file_pattern 扫描日志路径。
+      // date_layout 留空时，会直接扫描 log_root/*.log。
       // Linux 示例：/logs -> /logs/2026-08-21/*.log
       // Windows 示例：E:\\wwwroot\\t2_lobby_server\\logs
       "log_root": "E:\\wwwroot\\t2_lobby_admin\\go-admin\\temp\\logs",
@@ -54,9 +56,8 @@
       // 如果只想监听单个文件，也可以改成 "app.log"，或使用旧字段 file_name。
       "file_pattern": "*.log",
 
-      // Go 的日期格式模板，不是当天日期，不需要每天改。
-      // 你的目录是 2026-08-21 这种格式，所以固定写 2006-01-02。
-      "date_layout": "2006-01-02",
+      // 如果日志直接放在 log_root 下，不按日期分目录，这里留空即可。
+      "date_layout": "",
 
       // 用哪个时区计算“今天”的日期目录。
       "timezone": "Asia/Shanghai"
@@ -66,6 +67,8 @@
       // ,"direct_file": "/var/log/app.log"
     }
 
+    // 同一台机器也可以同时配两种 source：
+    // 一个按日期目录，一个直接扫 log_root 下的 *.log。
     // 监控多台服务器时，在上一个对象后加逗号，再加一个 source。
     // ,
     // {

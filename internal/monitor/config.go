@@ -278,9 +278,6 @@ func (c *Config) applyDefaults() {
 		if strings.TrimSpace(c.Sources[i].FileName) == "" && strings.TrimSpace(c.Sources[i].FilePattern) == "" {
 			c.Sources[i].FilePattern = "*.log"
 		}
-		if c.Sources[i].DateLayout == "" {
-			c.Sources[i].DateLayout = "2006-01-02"
-		}
 	}
 }
 
@@ -465,8 +462,13 @@ func (s SourceConfig) CurrentPaths(now time.Time) ([]string, error) {
 	if strings.TrimSpace(s.DirectFile) != "" {
 		return []string{filepath.Clean(s.DirectFile)}, nil
 	}
-	date := now.Format(s.DateLayout)
-	dir := filepath.Join(s.LogRoot, date)
+	dir := filepath.Clean(s.LogRoot)
+	if layout := strings.TrimSpace(s.DateLayout); layout != "" {
+		date := now.Format(layout)
+		if strings.TrimSpace(date) != "" {
+			dir = filepath.Join(dir, date)
+		}
+	}
 	pattern := s.LogPattern()
 	pathPattern := filepath.Join(dir, pattern)
 

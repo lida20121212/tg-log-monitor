@@ -85,6 +85,40 @@ func TestSourceCurrentPathsMatchesAllLogFiles(t *testing.T) {
 	}
 }
 
+func TestSourceCurrentPathsWithoutDateDir(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"b.log", "a.log", "skip.txt"} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte("test\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	source := SourceConfig{
+		Name:        "server-1",
+		LogRoot:     root,
+		FilePattern: "*.log",
+		DateLayout:  "",
+	}
+	now := time.Date(2026, 8, 21, 12, 0, 0, 0, time.Local)
+	paths, err := source.CurrentPaths(now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{
+		filepath.Join(root, "a.log"),
+		filepath.Join(root, "b.log"),
+	}
+	if len(paths) != len(want) {
+		t.Fatalf("paths len = %d, want %d: %#v", len(paths), len(want), paths)
+	}
+	for i := range want {
+		if paths[i] != filepath.Clean(want[i]) {
+			t.Fatalf("paths[%d] = %q, want %q", i, paths[i], filepath.Clean(want[i]))
+		}
+	}
+}
+
 func TestSourceCurrentPathsKeepsLegacyFileName(t *testing.T) {
 	source := SourceConfig{
 		Name:       "server-1",
@@ -114,10 +148,22 @@ func TestExampleConfigLoads(t *testing.T) {
 	if len(cfg.Sources) == 0 {
 		t.Fatal("expected at least one source")
 	}
+	var sawFlat, sawDated bool
 	for i, source := range cfg.Sources {
-		if got := source.DateLayout; got != "2006-01-02" {
-			t.Fatalf("sources[%d].date_layout = %q, want 2006-01-02", i, got)
+		switch source.DateLayout {
+		case "":
+			sawFlat = true
+		case "2006-01-02":
+			sawDated = true
+		default:
+			t.Fatalf("sources[%d].date_layout = %q, want empty or 2006-01-02", i, source.DateLayout)
 		}
+	}
+	if !sawFlat {
+		t.Fatal("expected example config to include a flat log source")
+	}
+	if !sawDated {
+		t.Fatal("expected example config to include a dated log source")
 	}
 	if !cfg.ResourceMonitor.Enabled {
 		t.Fatal("expected example resource monitor to be enabled")
