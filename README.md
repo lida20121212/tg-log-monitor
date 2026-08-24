@@ -18,7 +18,7 @@ E:\wwwroot\t2_lobby_server\logs\2026-08-10\app.log
 
 默认匹配 `level=ERROR/FATAL/PANIC` 的 JSON 日志；非 JSON 旧格式匹配单行里的大写 `ERROR/FATAL/PANIC` 或 `panic:`。
 同时支持 zap console 格式，例如 `2026-08-21T14:09:34.643+0530	ERROR	paymentchannel/http_request.go:162	...`；日志里带 ANSI 颜色码时会自动清理后再匹配和发送。
-默认排除 `"response": {"code":40102`、`"response": {"code":40205`、`"error": "Verification failed", "response": {"code":1,"msg":"Verification failed"`、`This device is already registered...mobile phone number ending in...`，以及 `paymentchannel/`、`payment_channel.go`、`支付通道异常` 这类已知业务错误，不发送到 TG 群。
+默认排除 `"response": {"code":40102`、`"response": {"code":40205`、`"error": "Verification failed", "response": {"code":1,"msg":"Verification failed"`、`This device is already registered...mobile phone number ending in...`，以及 `paymentchannel/`、`payment_channel.go`、`cash_payout.go`、支付/代付回调这类已知三方通道错误，不发送到 TG 群。
 
 ## 使用
 

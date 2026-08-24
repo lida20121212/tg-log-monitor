@@ -164,3 +164,42 @@ func TestDefaultConfigExcludesPaymentChannelGoErrors(t *testing.T) {
 		t.Fatal("expected payment_channel.go error to be excluded")
 	}
 }
+
+func TestDefaultConfigExcludesThirdPayoutOrderErrors(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := `2026-08-24T14:36:14.177+0530 ERROR service/cash_payout.go:199 create third payout order failed {"order_id": 306266, "order_no": "W1787562374096391", "uid": 46531504, "pay_api": "HXPAY-huanxing", "provider": "huixin", "third_request": {"account":"924010069782079","amount":500.00,"ifsc":"UTIB0004134","merchantLogin":"T2game","name":"S","notifyUrl":"https://api.apit2game.com/cash/payoutCallback/hxpay-huanxing","orderCode":"W1787562374096391","sign":"344a2600abd469b39d5fbd455e575921"}, "third_response": "{\"code\":\"400\",\"msg\":\"faild\",\"data\":\"请求参数错误：姓名长度不能少于2位\"}", "error": "parse huixin payout response failed"}`
+	if m.Match(line) {
+		t.Fatal("expected third payout order error to be excluded")
+	}
+}
+
+func TestDefaultConfigExcludesPayoutCallbackParseErrors(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := `2026-08-24T14:36:17.255+0530 ERROR service/cash_payout.go:154 parse payout callback failed {"path":"/cash/payoutCallback/hxpay-huanxing","error":"unexpected end of JSON input"}`
+	if m.Match(line) {
+		t.Fatal("expected payout callback parse error to be excluded")
+	}
+}
+
+func TestDefaultConfigExcludesPayoutCallbackErrors(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := `2026-08-24T14:36:17.255+0530 ERROR cash/cash.go:146 payout callback failed {"path":"/cash/payoutCallback/hxpay-huanxing","error":"unexpected end of JSON input"}`
+	if m.Match(line) {
+		t.Fatal("expected payout callback error to be excluded")
+	}
+}
