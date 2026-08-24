@@ -62,8 +62,10 @@ type ResourceMonitorConfig struct {
 }
 
 const (
-	excludeResponseCode40102      = `"response"\s*:\s*\{[^}\n]*"code"\s*:\s*40102\b`
-	excludeVerificationFailedCode = `"error"\s*:\s*"Verification failed"\s*,\s*"response"\s*:\s*\{[^}\n]*"code"\s*:\s*1\b[^}\n]*"msg"\s*:\s*"Verification failed"`
+	excludeResponseCode40102       = `"response"\s*:\s*\{[^}\n]*"code"\s*:\s*40102\b`
+	excludeVerificationFailedCode  = `"error"\s*:\s*"Verification failed"\s*,\s*"response"\s*:\s*\{[^}\n]*"code"\s*:\s*1\b[^}\n]*"msg"\s*:\s*"Verification failed"`
+	excludeDeviceAlreadyRegistered = `(?i)this device is already registered.*mobile phone number ending in`
+	excludePaymentChannelLogs      = `(?i)paymentchannel/`
 )
 
 type Int64Value int64
@@ -238,6 +240,8 @@ func (c *Config) applyDefaults() {
 	}
 	c.Match.ExcludeRegex = appendRegexIfMissing(c.Match.ExcludeRegex, excludeResponseCode40102)
 	c.Match.ExcludeRegex = appendRegexIfMissing(c.Match.ExcludeRegex, excludeVerificationFailedCode)
+	c.Match.ExcludeRegex = appendRegexIfMissing(c.Match.ExcludeRegex, excludeDeviceAlreadyRegistered)
+	c.Match.ExcludeRegex = appendRegexIfMissing(c.Match.ExcludeRegex, excludePaymentChannelLogs)
 	if c.Match.ContextLinesAfter < 0 {
 		c.Match.ContextLinesAfter = 0
 	}

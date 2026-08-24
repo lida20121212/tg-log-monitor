@@ -128,6 +128,10 @@
 
       // 过滤 Verification failed 且 response.code = 1 的错误。
       "\"error\"\\s*:\\s*\"Verification failed\"\\s*,\\s*\"response\"\\s*:\\s*\\{[^}\\n]*\"code\"\\s*:\\s*1\\b[^}\\n]*\"msg\"\\s*:\\s*\"Verification failed\""
+
+      // 下面这两类也是程序默认会额外过滤的：
+      // 1. This device is already registered ... mobile phone number ending in ...
+      // 2. paymentchannel/ 开头的三方支付错误日志
     ],
 
     // 命中错误后额外附带后续多少行。单行 JSON 日志保持 0 即可。

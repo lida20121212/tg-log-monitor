@@ -55,7 +55,7 @@ func TestDefaultMatcherMatchesZapConsoleError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	line := "2026-08-21T13:58:15.532+0530\t\x1b[31mERROR\x1b[0m\tpaymentchannel/http_request.go:162\tpayment channel http request failed\t{\"response_status_code\":502,\"error\":\"payment channel http status 502\"}"
+	line := "2026-08-21T13:58:15.532+0530\t\x1b[31mERROR\x1b[0m\tservice/order.go:162\torder request failed\t{\"response_status_code\":502,\"error\":\"backend http status 502\"}"
 	if !m.Match(line) {
 		t.Fatal("expected colored zap console ERROR to match")
 	}
@@ -110,5 +110,31 @@ func TestDefaultConfigExcludesVerificationFailedCode1(t *testing.T) {
 	line := `{"level":"ERROR","msg":"merchant verify failed","error": "Verification failed", "response": {"code":1,"msg":"Verification failed","data":null}}`
 	if m.Match(line) {
 		t.Fatal("expected verification failed code 1 error to be excluded")
+	}
+}
+
+func TestDefaultConfigExcludesDeviceAlreadyRegistered(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := `{"level":"ERROR","msg":"login request failed","response":{"code":40205,"msg":"This device is already registered. Please log in using your mobile phone number ending in 0415."}}`
+	if m.Match(line) {
+		t.Fatal("expected device already registered error to be excluded")
+	}
+}
+
+func TestDefaultConfigExcludesPaymentChannelErrors(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := "2026-08-24T08:10:17.000+0530\tERROR\tpaymentchannel/http_request.go:162\tpayment channel http request failed\t{\"response_status_code\":400,\"error\":\"payment channel http status 400: {\\\"status\\\":\\\"fail\\\",\\\"msg\\\":\\\"sign error\\\"}\"}"
+	if m.Match(line) {
+		t.Fatal("expected payment channel error to be excluded")
 	}
 }
