@@ -151,3 +151,16 @@ func TestDefaultConfigExcludesPaymentChannelErrors(t *testing.T) {
 		t.Fatal("expected payment channel error to be excluded")
 	}
 }
+
+func TestDefaultConfigExcludesPaymentChannelGoErrors(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := `2026-08-24T11:17:14.046+0530 ERROR service/payment_channel.go:140 create third pay order failed after pay order created {"order_id": 2085893, "order_no": "D1787550433906701", "pay_api": "ROLEXPAY", "provider": "rolexpay", "third_request": {"amount":"500","callback_url":"https://api.apit2game.com/mall/payCallback/rolexpay","merchant_order_no":"D1787550433906701","pay_type":"2","remark":"D1787550433906701","sign":"8981f42c88b2593864fa533a33e5a157","user_id":"10096"}, "third_response": "{\"code\":0,\"msg\":\"支付通道异常：No available channels\",\"time\":\"1787550433\",\"data\":null}", "error": "rolexpay create order failed: code=0 msg=支付通道异常：No available channels"}`
+	if m.Match(line) {
+		t.Fatal("expected payment_channel.go error to be excluded")
+	}
+}

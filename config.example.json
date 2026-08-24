@@ -137,7 +137,7 @@
 
       // 下面这两类也是程序默认会额外过滤的：
       // 1. This device is already registered ... mobile phone number ending in ...
-      // 2. paymentchannel/ 开头的三方支付错误日志
+      // 2. paymentchannel/、payment_channel.go、支付通道异常 相关的三方支付错误日志
     ],
 
     // 命中错误后额外附带后续多少行。单行 JSON 日志保持 0 即可。
