@@ -216,3 +216,16 @@ func TestDefaultConfigExcludesPayoutCallbackErrors(t *testing.T) {
 		t.Fatal("expected payout callback error to be excluded")
 	}
 }
+
+func TestDefaultConfigExcludesLuckyinpayBalanceErrors(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := `2026-08-24T19:37:02.423+0530 ERROR service/cash_payout.go:199 create third payout order failed {"order_id": 307391, "order_no": "W1787580422371126", "uid": 43704339, "pay_api": "Luckyinpay", "provider": "luckyinpay", "third_request": {"accountCode":"UBIN0569615","accountEmail":"sahilabbas8296@gmail.com","accountName":"Reena vano","accountNo":"696102010005852","accountPhone":"9719546571","accountType":"IFSC","currency":"INR","customerIp":"127.0.0.1","mchNo":"M1778736354","mchOrderNo":"W1787580422371126","notifyUrl":"https://api.apit2game.com/cash/payoutCallback/luckyinpay","payAmount":"2000.00","reqTime":"1787580422396","sign":"m090Qj97TGBzoQqIH2A9zTYg73MghwBKrc95OWj7kBTmjMbhsbO5ghlRaQzUgz5zLM5uiPxcwd9xaXi6Whw5vK2uIgFS8W9frwHo912XVvOHhsrOcUYNVrbTwSweVDmzpTov5Xm+UavcmugI31mmxarrkd9NmDtn2THt721O6OdB/TwhiCS/Wqx+gpEhj7UXrQRkZvbCE33Mub6MOOk6VLwWZXCE0I7I3oMHtA1Gv1AdBB68mb75yFT3hT7PMhx3HRZosTtaw7Yb/tPxrfWxGvaZs2mLNHuUfh+4hCAMgPMLoZkH2DhwKGooO96TsjYQf9rKpJecZ2Ido+owBDonIQ==","summary":"W1787580422371126"}, "third_response": "{\"code\":\"460\",\"message\":\"insufficient account balance, payin available amount\",\"monitorTrackId\":\"9b634519-57d6-4147-b2cd-7cf44c43ec29\",\"success\":false,\"timestamp\":\"1787580422421\"}", "error": "luckyinpay payout failed: code=460 message=insufficient account balance, payin available amount"}`
+	if m.Match(line) {
+		t.Fatal("expected luckyinpay balance error to be excluded")
+	}
+}

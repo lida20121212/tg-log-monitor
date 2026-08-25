@@ -67,7 +67,7 @@ const (
 	excludeVerificationFailedCode  = `"error"\s*:\s*"Verification failed"\s*,\s*"response"\s*:\s*\{[^}\n]*"code"\s*:\s*1\b[^}\n]*"msg"\s*:\s*"Verification failed"`
 	excludeDeviceAlreadyRegistered = `(?i)this device is already registered.*mobile phone number ending in`
 	excludeFieldValidationErrors   = `(?i)field validation for .* failed on the '.*' tag`
-	excludePaymentChannelLogs      = `(?i)(paymentchannel/|payment_channel\.go|cash_payout\.go|create third (pay|payout) order failed|parse payout callback failed|payout callback failed|/cash/payoutCallback/|third_request|third_response|支付通道异常|no available channels)`
+	excludePaymentChannelLogs      = `(?i)(paymentchannel/|payment_channel\.go|cash_payout\.go|cash/cash\.go|create third (pay|payout) order failed|parse payout callback failed|payout callback failed|/cash/payoutCallback/|third_request|third_response|luckyinpay|insufficient account balance|payin available amount|payout failed: code=460|支付通道异常|no available channels)`
 )
 
 type Int64Value int64
