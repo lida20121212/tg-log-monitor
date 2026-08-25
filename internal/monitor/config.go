@@ -66,6 +66,7 @@ const (
 	excludeResponseCode40205       = `"response"\s*:\s*\{[^}\n]*"code"\s*:\s*40205\b`
 	excludeVerificationFailedCode  = `"error"\s*:\s*"Verification failed"\s*,\s*"response"\s*:\s*\{[^}\n]*"code"\s*:\s*1\b[^}\n]*"msg"\s*:\s*"Verification failed"`
 	excludeDeviceAlreadyRegistered = `(?i)this device is already registered.*mobile phone number ending in`
+	excludeFieldValidationErrors   = `(?i)field validation for .* failed on the '.*' tag`
 	excludePaymentChannelLogs      = `(?i)(paymentchannel/|payment_channel\.go|cash_payout\.go|create third (pay|payout) order failed|parse payout callback failed|payout callback failed|/cash/payoutCallback/|third_request|third_response|支付通道异常|no available channels)`
 )
 
@@ -243,6 +244,7 @@ func (c *Config) applyDefaults() {
 	c.Match.ExcludeRegex = appendRegexIfMissing(c.Match.ExcludeRegex, excludeResponseCode40205)
 	c.Match.ExcludeRegex = appendRegexIfMissing(c.Match.ExcludeRegex, excludeVerificationFailedCode)
 	c.Match.ExcludeRegex = appendRegexIfMissing(c.Match.ExcludeRegex, excludeDeviceAlreadyRegistered)
+	c.Match.ExcludeRegex = appendRegexIfMissing(c.Match.ExcludeRegex, excludeFieldValidationErrors)
 	c.Match.ExcludeRegex = appendRegexIfMissing(c.Match.ExcludeRegex, excludePaymentChannelLogs)
 	if c.Match.ContextLinesAfter < 0 {
 		c.Match.ContextLinesAfter = 0

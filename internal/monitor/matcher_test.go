@@ -126,6 +126,19 @@ func TestDefaultConfigExcludesDeviceAlreadyRegistered(t *testing.T) {
 	}
 }
 
+func TestDefaultConfigExcludesFieldValidationErrors(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := `2026-08-24T19:26:43.391+0530 ERROR handler/bind.go:51 request bind failed {"error":"Key: 'BindingPhoneRequest.Code' Error:Field validation for 'Code' failed on the 'len' tag"}`
+	if m.Match(line) {
+		t.Fatal("expected field validation error to be excluded")
+	}
+}
+
 func TestDefaultConfigExcludesResponseCode40205(t *testing.T) {
 	cfg := Config{}
 	cfg.applyDefaults()
