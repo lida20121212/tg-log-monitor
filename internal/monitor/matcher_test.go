@@ -217,6 +217,19 @@ func TestDefaultConfigExcludesPayoutCallbackErrors(t *testing.T) {
 	}
 }
 
+func TestDefaultConfigExcludesEmptyCallbackPayloadErrors(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := `2026-08-25T06:54:37.065+0530 ERROR service/cash_payout.go:154 parse payout callback failed {"path":"/cash/payoutCallback/hoyo","error":"empty hoyopay callback payload"}`
+	if m.Match(line) {
+		t.Fatal("expected empty callback payload error to be excluded")
+	}
+}
+
 func TestDefaultConfigExcludesLuckyinpayBalanceErrors(t *testing.T) {
 	cfg := Config{}
 	cfg.applyDefaults()
