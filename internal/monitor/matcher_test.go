@@ -100,6 +100,19 @@ func TestDefaultConfigExcludesResponseCode40102WithSpaces(t *testing.T) {
 	}
 }
 
+func TestDefaultConfigExcludesResponseCode40103(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := `2026-08-26T07:32:28.653+0530 ERROR util/request_log.go:30 jwt auth failed {"method":"POST","path":"/login/verifyToken","error":"We’re performing a short maintenance and had to log you out temporarily.","response":{"code":40103,"msg":"We’re performing a short maintenance and had to log you out temporarily. It will take about 10 hours. Thanks for your understanding!"}}`
+	if m.Match(line) {
+		t.Fatal("expected response code 40103 error to be excluded")
+	}
+}
+
 func TestDefaultConfigExcludesVerificationFailedCode1(t *testing.T) {
 	cfg := Config{}
 	cfg.applyDefaults()

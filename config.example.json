@@ -129,6 +129,9 @@
       // 过滤 response.code = 40102。
       "\"response\"\\s*:\\s*\\{[^}\\n]*\"code\"\\s*:\\s*40102\\b",
 
+      // 过滤 response.code = 40103。
+      "\"response\"\\s*:\\s*\\{[^}\\n]*\"code\"\\s*:\\s*40103\\b",
+
       // 过滤 response.code = 40205。
       "\"response\"\\s*:\\s*\\{[^}\\n]*\"code\"\\s*:\\s*40205\\b",
 
