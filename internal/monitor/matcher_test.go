@@ -255,3 +255,35 @@ func TestDefaultConfigExcludesLuckyinpayBalanceErrors(t *testing.T) {
 		t.Fatal("expected luckyinpay balance error to be excluded")
 	}
 }
+
+func TestDefaultConfigExcludesContextCanceled(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := []string{
+		"2026-11-25T15:27:44.259+0530\tERROR\tservice/red_point_service.go:210\trefresh user online location failed\t{\"uid\": 58770143, \"location\": \"lobby\", \"error\": \"context canceled\"}",
+		"2026-11-25T15:29:35.202+0530\tERROR\tservice/channel.go:43\tcreate hot update check log failed\t{\"error\": \"context canceled\"}",
+		`{"level":"ERROR","msg":"query failed","error":"query user: context canceled"}`,
+	}
+	for _, line := range lines {
+		if m.Match(line) {
+			t.Fatalf("expected context canceled error to be excluded: %s", line)
+		}
+	}
+}
+
+func TestDefaultConfigKeepsContextDeadlineExceeded(t *testing.T) {
+	cfg := Config{}
+	cfg.applyDefaults()
+	m, err := NewMatcher(cfg.Match)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := "2026-11-25T15:27:44.259+0530\tERROR\tservice/red_point_service.go:210\trefresh user online location failed\t{\"uid\": 58770143, \"error\": \"context deadline exceeded\"}"
+	if !m.Match(line) {
+		t.Fatal("expected context deadline exceeded error to still be sent")
+	}
+}
