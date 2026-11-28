@@ -142,7 +142,7 @@
       // 1. This device is already registered ... mobile phone number ending in ...
       // 2. Field validation for ... failed on the ... tag 这类参数校验失败
       // 3. paymentchannel/、payment_channel.go、cash_payout.go、luckyinpay、empty callback payload、支付/代付回调相关的三方通道错误日志
-      // 4. "error": "...context canceled" 客户端断开导致请求被取消
+      // 4. "error" / "err": "...context canceled" 客户端断开导致请求被取消
     ],
 
     // 命中错误后额外附带后续多少行。单行 JSON 日志保持 0 即可。

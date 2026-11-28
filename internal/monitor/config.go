@@ -69,7 +69,8 @@ const (
 	excludeDeviceAlreadyRegistered = `(?i)this device is already registered.*mobile phone number ending in`
 	excludeFieldValidationErrors   = `(?i)field validation for .* failed on the '.*' tag`
 	// 客户端断开（超时、切后台）导致请求 ctx 被取消，不是服务端故障。
-	excludeContextCanceled    = `"error"\s*:\s*"[^"\n]*context canceled"`
+	// 兼容 JSON 的 "err"/"error": "..." 和 logfmt 的 error="..."，值里允许 \" 转义引号。
+	excludeContextCanceled    = `\berr(or)?"?\s*[:=]\s*"(?:[^"\\\n]|\\.)*context canceled"`
 	excludePaymentChannelLogs = `(?i)(paymentchannel/|payment_channel\.go|cash_payout\.go|cash/cash\.go|create third (pay|payout) order failed|parse payout callback failed|payout callback failed|empty .*callback payload|callback payload is empty|/cash/payoutCallback/|third_request|third_response|luckyinpay|insufficient account balance|payin available amount|payout failed: code=460|支付通道异常|no available channels)`
 )
 

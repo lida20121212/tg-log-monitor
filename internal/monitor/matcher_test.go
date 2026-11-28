@@ -1,6 +1,9 @@
 package monitor
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestMatcherMatchesZapJSONError(t *testing.T) {
 	m, err := NewMatcher(MatchConfig{})
@@ -267,12 +270,24 @@ func TestDefaultConfigExcludesContextCanceled(t *testing.T) {
 		"2026-11-25T15:27:44.259+0530\tERROR\tservice/red_point_service.go:210\trefresh user online location failed\t{\"uid\": 58770143, \"location\": \"lobby\", \"error\": \"context canceled\"}",
 		"2026-11-25T15:29:35.202+0530\tERROR\tservice/channel.go:43\tcreate hot update check log failed\t{\"error\": \"context canceled\"}",
 		`{"level":"ERROR","msg":"query failed","error":"query user: context canceled"}`,
+		"2026-11-25T18:27:05.176+0530\tERROR\tgames/game_handler.go:76\tStartGame error:\t{\"err\": \"context canceled\"}",
+		"2026-11-26T08:17:23.029+0530\tERROR\tgames/game_handler.go:79\tStartGame error:\t{\"err\": \"context canceled\", \"uid\": 52267907, \"game_inner_name\": \"t2_witches_night\", \"provider\": \"T2\"}",
+		"2026-11-27T21:30:25.586+0530 ERROR games/game_handler.go:79 StartGame error: {\"err\": \"context canceled\", \"uid\": 46610666, \"game_inner_name\": \"t2_fortune_gems_legend\", \"provider\": \"T2\"}",
+		`2026/11/26 08:21:21.557715 [ERROR] business event=stream_failure game_code=tp stage="route_check" request_type="client_action" response_type="error" status=failed error="load hand \"0948c462-f9c2-4660-ba1a-f79d937117be\" from redis: context canceled"`,
 	}
 	for _, line := range lines {
+		if !m.Match(stripContextCanceled(line)) {
+			t.Fatalf("test line should alert without context canceled: %s", line)
+		}
 		if m.Match(line) {
 			t.Fatalf("expected context canceled error to be excluded: %s", line)
 		}
 	}
+}
+
+// stripContextCanceled 把 context canceled 换成其他错误，确认测试行本身会触发告警。
+func stripContextCanceled(line string) string {
+	return strings.ReplaceAll(line, "context canceled", "connection refused")
 }
 
 func TestDefaultConfigKeepsContextDeadlineExceeded(t *testing.T) {
